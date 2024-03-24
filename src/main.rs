@@ -590,9 +590,187 @@ fn coalesce(ast: &ASTNode) -> Expression {
                 UnaryOp::Arccot => Expression::Function(Function::Arccot(Box::new(arg))),
                 UnaryOp::Sqrt => Expression::Sqrt(Sqrt {
                     arg: Box::new(arg),
+
+//exposed to api consumers, simplifies an expression to standard form
+//loops until no more simplifications can be made
+fn simplify_to_standard_form(mut expression: Expression) -> Expression {
+    let mut simplified = false;
+    let passes = [coalesce_multiplication];
+    while !simplified {
+        simplified = true;
+    }
+
+    expression
+}
+
+fn coalesce_multiplication(expression: Expression) -> (Expression, bool) {
+    match expression {
+        Expression::Multiplication(multiplication) => {
+            let mut simplified = true;
+            let new_terms = multiplication
+                .terms
+                .into_iter()
+                .flat_map(|term| match *term {
+                    Expression::Multiplication(inner_multiplication) => {
+                        simplified = false;
+                        inner_multiplication.terms
+                    }
+                    _ => vec![term],
+                })
+                .map(|e| coalesce_multiplication(*e))
+                .fold((true, Vec::new()), |mut a, e| {
+                    a.0 = a.0 & e.1;
+                    a.1.push(Box::new(e.0));
+                    a
+                });
+            (
+                Expression::Multiplication(Multiplication { terms: new_terms.1 }),
+                new_terms.0 && simplified,
+            )
+        }
+        Expression::Addition(addition) => {
+            let new_terms = addition
+                .terms
+                .into_iter()
+                .map(|term| coalesce_multiplication(*term))
+                .fold((true, Vec::new()), |mut a, e| {
+                    a.0 = a.0 & e.1;
+                    a.1.push(Box::new(e.0));
+                    a
+                });
+            (
+                Expression::Addition(Addition { terms: new_terms.1 }),
+                new_terms.0,
+            )
+        }
+        Expression::Division(division) => {
+            let numerator = coalesce_multiplication(*division.numerator);
+            let denominator = coalesce_multiplication(*division.denominator);
+            (
+                Expression::Division(Division {
+                    numerator: Box::new(numerator.0),
+                    denominator: Box::new(denominator.0),
                 }),
+                numerator.1 && denominator.1,
+            )
+        }
+        Expression::Exponentiation(exponentiation) => {
+            let base = coalesce_multiplication(*exponentiation.base);
+            let exponent = coalesce_multiplication(*exponentiation.exponent);
+            (
+                Expression::Exponentiation(Exponentiation {
+                    base: Box::new(base.0),
+                    exponent: Box::new(exponent.0),
+                }),
+                base.1 && exponent.1,
+            )
+        }
+        Expression::Sqrt(sqrt) => {
+            let arg = coalesce_multiplication(*sqrt.arg);
+            (
+                Expression::Sqrt(Sqrt {
+                    arg: Box::new(arg.0),
+                }),
+                arg.1,
+            )
+        }
+        Expression::Function(function) => match function {
+            Function::Sin(arg) => {
+                let arg = coalesce_multiplication(*arg);
+                (
+                    Expression::Function(Function::Sin(Box::new(arg.0))),
+                    arg.1,
+                )
+            }
+            Function::Cos(arg) => {
+                let arg = coalesce_multiplication(*arg);
+                (
+                    Expression::Function(Function::Cos(Box::new(arg.0))),
+                    arg.1,
+                )
+            }
+            Function::Tan(arg) => {
+                let arg = coalesce_multiplication(*arg);
+                (
+                    Expression::Function(Function::Tan(Box::new(arg.0))),
+                    arg.1,
+                )
+            }
+            Function::Csc(arg) => {
+                let arg = coalesce_multiplication(*arg);
+                (
+                    Expression::Function(Function::Csc(Box::new(arg.0))),
+                    arg.1,
+                )
+            }
+            Function::Sec(arg) => {
+                let arg = coalesce_multiplication(*arg);
+                (
+                    Expression::Function(Function::Sec(Box::new(arg.0))),
+                    arg.1,
+                )
+            }
+            Function::Cot(arg) => {
+                let arg = coalesce_multiplication(*arg);
+                (
+                    Expression::Function(Function::Cot(Box::new(arg.0))),
+                    arg.1,
+                )
+            }
+            Function::Arcsin(arg) => {
+                let arg = coalesce_multiplication(*arg);
+                (
+                    Expression::Function(Function::Arcsin(Box::new(arg.0))),
+                    arg.1,
+                )
+            }
+            Function::Arccos(arg) => {
+                let arg = coalesce_multiplication(*arg);
+                (
+                    Expression::Function(Function::Arccos(Box::new(arg.0))),
+                    arg.1,
+                )
+            }
+            Function::Arctan(arg) => {
+                let arg = coalesce_multiplication(*arg);
+                (
+                    Expression::Function(Function::Arctan(Box::new(arg.0))),
+                    arg.1,
+                )
+            }
+            Function::Arccsc(arg) => {
+                let arg = coalesce_multiplication(*arg);
+                (
+                    Expression::Function(Function::Arccsc(Box::new(arg.0))),
+                    arg.1,
+                )
+            }
+            Function::Arcsec(arg) => {
+                let arg = coalesce_multiplication(*arg);
+                (
+                    Expression::Function(Function::Arcsec(Box::new(arg.0))),
+                    arg.1,
+                )
+            }
+            Function::Arccot(arg) => {
+                let arg = coalesce_multiplication(*arg);
+                (
+                    Expression::Function(Function::Arccot(Box::new(arg.0))),
+                    arg.1,
+                )
             }
         },
+        Expression::Negation(negation) => {
+            let term = coalesce_multiplication(*negation.term);
+            (
+                Expression::Negation(Negation {
+                    term: Box::new(term.0),
+                }),
+                term.1,
+            )
+        }
+        Expression::Number(_) => (expression, true),
+        Expression::Variable(_) => (expression, true),
     }
 }
 
