@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, error, io::Write, iter::Peekable};
+use std::{collections::VecDeque, io::Write};
 
 fn main() {
     println!("Welcome to the mathmatical solver, please enter an expression: ");
@@ -23,7 +23,7 @@ fn main_loop() {
 fn solve(input: String) -> f64 {
     let tokens = tokenize(input);
     let ast = parse(tokens);
-    let simplified = coalesce(&ast[0]);
+    let simplified = simplify(&ast[0]);
     println!("Solving:");
     print_expression(&simplified, 0);
     0.0
@@ -96,7 +96,7 @@ fn tokenize(mut input: String) -> Vec<Token> {
         (Token::PI, "pi"),
     ];
 
-    while input.len() > 0 {
+    while !input.is_empty() {
         //check for whitespace, remove it and rerun loop if whitespace is found
         if whitespace_chars.contains(&&input[0..1]) {
             input.drain(..1);
@@ -125,7 +125,7 @@ fn tokenize(mut input: String) -> Vec<Token> {
             }
         }
         input.drain(..number.len());
-        if number.len() > 0 {
+        if !number.is_empty() {
             tokens.push(Token::Number(number.parse().unwrap()));
             continue;
         }
@@ -140,7 +140,6 @@ fn tokenize(mut input: String) -> Vec<Token> {
 
         //if we get here, we have an invalid token
         panic!("Invalid token: {}", input);
-
     }
 
     tokens
@@ -186,22 +185,22 @@ fn print_ast(ast: &ASTNode, indent: i32) {
     match ast {
         ASTNode::Number(n) => {
             println!("Number: {}", n);
-        },
+        }
         ASTNode::PI => {
             println!("PI");
-        },
+        }
         ASTNode::Variable(v) => {
             println!("Variable: {}", v);
-        },
+        }
         ASTNode::BinaryOp(lhs, rhs, op) => {
             println!("BinaryOp: {:?}", op);
             print_ast(lhs, indent + 1);
             print_ast(rhs, indent + 1);
-        },
+        }
         ASTNode::UnaryOp(arg, op) => {
             println!("UnaryOp: {:?}", op);
             print_ast(arg, indent + 1);
-        },
+        }
     }
 }
 
@@ -259,7 +258,7 @@ fn shunting_yard_to_binary_op(op: ShuntingYardStack) -> BinaryOp {
         ShuntingYardStack::Multiply => BinaryOp::Multiply,
         ShuntingYardStack::Divide => BinaryOp::Divide,
         ShuntingYardStack::Pow => BinaryOp::Pow,
-        _ => panic!("Invalid ShuntingYardStack to BinaryOp conversion")
+        _ => panic!("Invalid ShuntingYardStack to BinaryOp conversion"),
     }
 }
 
@@ -278,7 +277,7 @@ fn shunting_yard_to_unary_op(op: ShuntingYardStack) -> UnaryOp {
         ShuntingYardStack::Arcsec => UnaryOp::Arcsec,
         ShuntingYardStack::Arccot => UnaryOp::Arccot,
         ShuntingYardStack::Sqrt => UnaryOp::Sqrt,
-        _ => panic!("Invalid ShuntingYardStack to UnaryOp conversion")
+        _ => panic!("Invalid ShuntingYardStack to UnaryOp conversion"),
     }
 }
 
@@ -292,111 +291,126 @@ fn parse(tokens: Vec<Token>) -> Vec<ASTNode> {
         match token {
             Token::Multiply => {
                 //compare to the top of the stack
-                while stack.len() > 0 && get_precedence(*stack.last().unwrap()) >= get_precedence(ShuntingYardStack::Multiply) {
+                while !stack.is_empty()
+                    && get_precedence(*stack.last().unwrap())
+                        >= get_precedence(ShuntingYardStack::Multiply)
+                {
                     let rhs = Box::new(expression_output.pop_back().unwrap());
                     let lhs = Box::new(expression_output.pop_back().unwrap());
                     expression_output.push_back(ASTNode::BinaryOp(
                         lhs,
                         rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap())
+                        shunting_yard_to_binary_op(stack.pop().unwrap()),
                     ));
                 }
                 stack.push(ShuntingYardStack::Multiply);
-            },
+            }
             Token::Plus => {
                 //compare to the top of the stack
-                while stack.len() > 0 && get_precedence(*stack.last().unwrap()) >= get_precedence(ShuntingYardStack::Add) {
+                while !stack.is_empty()
+                    && get_precedence(*stack.last().unwrap())
+                        >= get_precedence(ShuntingYardStack::Add)
+                {
                     let rhs = Box::new(expression_output.pop_back().unwrap());
                     let lhs = Box::new(expression_output.pop_back().unwrap());
                     expression_output.push_back(ASTNode::BinaryOp(
                         lhs,
                         rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap())
+                        shunting_yard_to_binary_op(stack.pop().unwrap()),
                     ));
                 }
                 stack.push(ShuntingYardStack::Add);
-            },
+            }
             Token::Minus => {
                 //compare to the top of the stack
-                while stack.len() > 0 && get_precedence(*stack.last().unwrap()) >= get_precedence(ShuntingYardStack::Subtract) {
+                while !stack.is_empty()
+                    && get_precedence(*stack.last().unwrap())
+                        >= get_precedence(ShuntingYardStack::Subtract)
+                {
                     let rhs = Box::new(expression_output.pop_back().unwrap());
                     let lhs = Box::new(expression_output.pop_back().unwrap());
                     expression_output.push_back(ASTNode::BinaryOp(
                         lhs,
                         rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap())
+                        shunting_yard_to_binary_op(stack.pop().unwrap()),
                     ));
                 }
                 stack.push(ShuntingYardStack::Subtract);
-            },
+            }
             Token::Divide => {
                 //compare to the top of the stack
-                while stack.len() > 0 && get_precedence(*stack.last().unwrap()) >= get_precedence(ShuntingYardStack::Divide) {
+                while !stack.is_empty()
+                    && get_precedence(*stack.last().unwrap())
+                        >= get_precedence(ShuntingYardStack::Divide)
+                {
                     let rhs = Box::new(expression_output.pop_back().unwrap());
                     let lhs = Box::new(expression_output.pop_back().unwrap());
                     expression_output.push_back(ASTNode::BinaryOp(
                         lhs,
                         rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap())
+                        shunting_yard_to_binary_op(stack.pop().unwrap()),
                     ));
                 }
                 stack.push(ShuntingYardStack::Divide);
-            },
+            }
             Token::Pow => {
                 //compare to the top of the stack
-                while stack.len() > 0 && get_precedence(*stack.last().unwrap()) > get_precedence(ShuntingYardStack::Pow) {
+                while !stack.is_empty()
+                    && get_precedence(*stack.last().unwrap())
+                        > get_precedence(ShuntingYardStack::Pow)
+                {
                     let rhs = Box::new(expression_output.pop_back().unwrap());
                     let lhs = Box::new(expression_output.pop_back().unwrap());
                     expression_output.push_back(ASTNode::BinaryOp(
                         lhs,
                         rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap())
+                        shunting_yard_to_binary_op(stack.pop().unwrap()),
                     ));
                 }
                 stack.push(ShuntingYardStack::Pow);
-            },
+            }
             Token::Sin => {
                 stack.push(ShuntingYardStack::Sin);
-            },
+            }
             Token::Cos => {
                 stack.push(ShuntingYardStack::Cos);
-            },
+            }
             Token::Tan => {
                 stack.push(ShuntingYardStack::Tan);
-            },
+            }
             Token::Csc => {
                 stack.push(ShuntingYardStack::Csc);
-            },
+            }
             Token::Sec => {
                 stack.push(ShuntingYardStack::Sec);
-            },
+            }
             Token::Cot => {
                 stack.push(ShuntingYardStack::Cot);
-            },
+            }
             Token::Arcsin => {
                 stack.push(ShuntingYardStack::Arcsin);
-            },
+            }
             Token::Arccos => {
                 stack.push(ShuntingYardStack::Arccos);
-            },
+            }
             Token::Arctan => {
                 stack.push(ShuntingYardStack::Arctan);
-            },
+            }
             Token::Arccsc => {
                 stack.push(ShuntingYardStack::Arccsc);
-            },
+            }
             Token::Arcsec => {
                 stack.push(ShuntingYardStack::Arcsec);
-            },
+            }
             Token::Arccot => {
                 stack.push(ShuntingYardStack::Arccot);
-            },
+            }
             Token::Sqrt => {
                 stack.push(ShuntingYardStack::Sqrt);
-            },
+            }
             Token::OpenParen => {
                 stack.push(ShuntingYardStack::Paren);
-            },
+            }
             Token::CloseParen => {
                 while *stack.last().unwrap() != ShuntingYardStack::Paren {
                     let rhs = Box::new(expression_output.pop_back().unwrap());
@@ -404,85 +418,91 @@ fn parse(tokens: Vec<Token>) -> Vec<ASTNode> {
                     expression_output.push_back(ASTNode::BinaryOp(
                         lhs,
                         rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap())
+                        shunting_yard_to_binary_op(stack.pop().unwrap()),
                     ));
                 }
                 stack.pop();
                 //handle functions
-                match stack.pop() {
-                    Some(op) => {
-                        let arg = Box::new(expression_output.pop_back().unwrap());
-                        expression_output.push_back(ASTNode::UnaryOp(
-                            arg,
-                            shunting_yard_to_unary_op(op)
-                        ));
-                    },
-                    _ => {}
+                if let Some(op) = stack.pop() {
+                    let arg = Box::new(expression_output.pop_back().unwrap());
+                    expression_output
+                        .push_back(ASTNode::UnaryOp(arg, shunting_yard_to_unary_op(op)));
                 }
-            },
+            }
             Token::Number(n) => {
                 expression_output.push_back(ASTNode::Number(n));
-            },
+            }
             Token::Variable(v) => {
                 expression_output.push_back(ASTNode::Variable(v));
-            },
+            }
             Token::PI => {
                 expression_output.push_back(ASTNode::PI);
-            },
+            }
             Token::Equals => {
                 //pop all remaining operators off the stack
-                while stack.len() > 0 {
+                while !stack.is_empty() {
                     let rhs = Box::new(expression_output.pop_back().unwrap());
                     let lhs = Box::new(expression_output.pop_back().unwrap());
                     expression_output.push_back(ASTNode::BinaryOp(
                         lhs,
                         rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap())
+                        shunting_yard_to_binary_op(stack.pop().unwrap()),
                     ));
                 }
                 true_output.push(expression_output.pop_back().unwrap());
-            },
+            }
         }
     }
-    while stack.len() > 0 {
+    while !stack.is_empty() {
         let rhs = Box::new(expression_output.pop_back().unwrap());
         let lhs = Box::new(expression_output.pop_back().unwrap());
         expression_output.push_back(ASTNode::BinaryOp(
             lhs,
             rhs,
-            shunting_yard_to_binary_op(stack.pop().unwrap())
+            shunting_yard_to_binary_op(stack.pop().unwrap()),
         ));
     }
     true_output.push(expression_output.pop_back().unwrap());
     true_output
 }
 
+#[derive(Debug, Clone)]
 struct Multiplication {
+    //TODO: don't have box here?
+    #[allow(clippy::vec_box)]
     terms: Vec<Box<Expression>>,
 }
 
+#[derive(Debug, Clone)]
 struct Division {
     numerator: Box<Expression>,
     denominator: Box<Expression>,
 }
 
+#[derive(Debug, Clone)]
 struct Addition {
+    //TODO: don't have box here?
+    #[allow(clippy::vec_box)]
     terms: Vec<Box<Expression>>,
 }
 
+#[derive(Debug, Clone)]
 struct Negation {
     term: Box<Expression>,
 }
 
+#[derive(Debug, Clone)]
 struct Exponentiation {
     base: Box<Expression>,
     exponent: Box<Expression>,
 }
 
+#[derive(Debug, Clone)]
 struct Sqrt {
     arg: Box<Expression>,
 }
 
+#[derive(Debug, Clone)]
 enum Function {
     Sin(Box<Expression>),
     Cos(Box<Expression>),
@@ -497,6 +517,8 @@ enum Function {
     Arcsec(Box<Expression>),
     Arccot(Box<Expression>),
 }
+
+#[derive(Debug, Clone)]
 enum Expression {
     Number(f64),
     Variable(String),
@@ -509,72 +531,65 @@ enum Expression {
     Function(Function),
 }
 
-fn coalesce(ast: &ASTNode) -> Expression {
+fn simplify(ast: &ASTNode) -> Expression {
+    let converted = convert_to_expression(ast);
+    let simplified = simplify_to_standard_form(converted);
+    #[allow(clippy::let_and_return)]
+    simplified
+}
+
+fn convert_to_expression(ast: &ASTNode) -> Expression {
     match ast {
         ASTNode::Number(n) => Expression::Number(*n),
         ASTNode::PI => Expression::Number(std::f64::consts::PI),
         ASTNode::Variable(v) => Expression::Variable(v.clone()),
-        ASTNode::BinaryOp(lhs, rhs, op) => {
-            match op {
-                BinaryOp::Add => {
-                    let lhs = coalesce(lhs);
-                    let rhs = coalesce(rhs);
-                    let mut terms = vec![Box::new(lhs), Box::new(rhs)];
+        ASTNode::BinaryOp(lhs, rhs, op) => match op {
+            BinaryOp::Add => {
+                let lhs = convert_to_expression(lhs);
+                let rhs = convert_to_expression(rhs);
 
-                    let mut simplified = false;
-                    while !simplified {
-                        simplified = true;
-                        terms = terms.into_iter().flat_map(|term| {
-                            match *term {
-                                Expression::Addition(addition) => {
-                                    simplified = false;
-                                    addition.terms.into_iter()
-                                },
-                                _ => vec![term].into_iter(),
-                            }
-                        }).collect();
-                    }
-
-                    Expression::Addition(Addition {
-                        terms,
-                    })
-                },
-                BinaryOp::Subtract => {
-                    let lhs = coalesce(lhs);
-                    let rhs = coalesce(rhs);
-                    Expression::Addition(Addition {
-                        terms: vec![Box::new(lhs), Box::new(Expression::Negation(Negation {
+                Expression::Addition(Addition {
+                    terms: vec![Box::new(lhs), Box::new(rhs)],
+                })
+            }
+            BinaryOp::Subtract => {
+                let lhs = convert_to_expression(lhs);
+                let rhs = convert_to_expression(rhs);
+                Expression::Addition(Addition {
+                    terms: vec![
+                        Box::new(lhs),
+                        Box::new(Expression::Negation(Negation {
                             term: Box::new(rhs),
-                        }))],
-                    })
-                },
-                BinaryOp::Multiply => {
-                    let lhs = coalesce(lhs);
-                    let rhs = coalesce(rhs);
-                    Expression::Multiplication(Multiplication {
-                        terms: vec![Box::new(lhs), Box::new(rhs)],
-                    })
-                },
-                BinaryOp::Divide => {
-                    let lhs = coalesce(lhs);
-                    let rhs = coalesce(rhs);
-                    Expression::Division(Division {
-                        numerator: Box::new(lhs),
-                        denominator: Box::new(rhs),
-                    })
-                },
-                BinaryOp::Pow => {
-                    let base = coalesce(lhs);
-                    let exponent = coalesce(rhs);
-                    Expression::Exponentiation(Exponentiation {
-                        base: Box::new(base),
-                        exponent: Box::new(exponent),
-                    })
-                },
+                        })),
+                    ],
+                })
+            }
+            BinaryOp::Multiply => {
+                let lhs = convert_to_expression(lhs);
+                let rhs = convert_to_expression(rhs);
+                Expression::Multiplication(Multiplication {
+                    terms: vec![Box::new(lhs), Box::new(rhs)],
+                })
+            }
+            BinaryOp::Divide => {
+                let lhs = convert_to_expression(lhs);
+                let rhs = convert_to_expression(rhs);
+                Expression::Division(Division {
+                    numerator: Box::new(lhs),
+                    denominator: Box::new(rhs),
+                })
+            }
+            BinaryOp::Pow => {
+                let base = convert_to_expression(lhs);
+                let exponent = convert_to_expression(rhs);
+                Expression::Exponentiation(Exponentiation {
+                    base: Box::new(base),
+                    exponent: Box::new(exponent),
+                })
             }
         },
         ASTNode::UnaryOp(arg, op) => {
-            let arg = coalesce(arg);
+            let arg = convert_to_expression(arg);
             match op {
                 UnaryOp::Sin => Expression::Function(Function::Sin(Box::new(arg))),
                 UnaryOp::Cos => Expression::Function(Function::Cos(Box::new(arg))),
@@ -588,8 +603,11 @@ fn coalesce(ast: &ASTNode) -> Expression {
                 UnaryOp::Arccsc => Expression::Function(Function::Arccsc(Box::new(arg))),
                 UnaryOp::Arcsec => Expression::Function(Function::Arcsec(Box::new(arg))),
                 UnaryOp::Arccot => Expression::Function(Function::Arccot(Box::new(arg))),
-                UnaryOp::Sqrt => Expression::Sqrt(Sqrt {
-                    arg: Box::new(arg),
+                UnaryOp::Sqrt => Expression::Sqrt(Sqrt { arg: Box::new(arg) }),
+            }
+        }
+    }
+}
 
 //exposed to api consumers, simplifies an expression to standard form
 //loops until no more simplifications can be made
@@ -598,6 +616,11 @@ fn simplify_to_standard_form(mut expression: Expression) -> Expression {
     let passes = [coalesce_multiplication];
     while !simplified {
         simplified = true;
+        for pass in &passes {
+            let (pass_expression, pass_simplified) = pass(expression);
+            expression = pass_expression;
+            simplified &= pass_simplified;
+        }
     }
 
     expression
@@ -619,7 +642,7 @@ fn coalesce_multiplication(expression: Expression) -> (Expression, bool) {
                 })
                 .map(|e| coalesce_multiplication(*e))
                 .fold((true, Vec::new()), |mut a, e| {
-                    a.0 = a.0 & e.1;
+                    a.0 &= e.1;
                     a.1.push(Box::new(e.0));
                     a
                 });
@@ -634,7 +657,7 @@ fn coalesce_multiplication(expression: Expression) -> (Expression, bool) {
                 .into_iter()
                 .map(|term| coalesce_multiplication(*term))
                 .fold((true, Vec::new()), |mut a, e| {
-                    a.0 = a.0 & e.1;
+                    a.0 &= e.1;
                     a.1.push(Box::new(e.0));
                     a
                 });
@@ -677,45 +700,27 @@ fn coalesce_multiplication(expression: Expression) -> (Expression, bool) {
         Expression::Function(function) => match function {
             Function::Sin(arg) => {
                 let arg = coalesce_multiplication(*arg);
-                (
-                    Expression::Function(Function::Sin(Box::new(arg.0))),
-                    arg.1,
-                )
+                (Expression::Function(Function::Sin(Box::new(arg.0))), arg.1)
             }
             Function::Cos(arg) => {
                 let arg = coalesce_multiplication(*arg);
-                (
-                    Expression::Function(Function::Cos(Box::new(arg.0))),
-                    arg.1,
-                )
+                (Expression::Function(Function::Cos(Box::new(arg.0))), arg.1)
             }
             Function::Tan(arg) => {
                 let arg = coalesce_multiplication(*arg);
-                (
-                    Expression::Function(Function::Tan(Box::new(arg.0))),
-                    arg.1,
-                )
+                (Expression::Function(Function::Tan(Box::new(arg.0))), arg.1)
             }
             Function::Csc(arg) => {
                 let arg = coalesce_multiplication(*arg);
-                (
-                    Expression::Function(Function::Csc(Box::new(arg.0))),
-                    arg.1,
-                )
+                (Expression::Function(Function::Csc(Box::new(arg.0))), arg.1)
             }
             Function::Sec(arg) => {
                 let arg = coalesce_multiplication(*arg);
-                (
-                    Expression::Function(Function::Sec(Box::new(arg.0))),
-                    arg.1,
-                )
+                (Expression::Function(Function::Sec(Box::new(arg.0))), arg.1)
             }
             Function::Cot(arg) => {
                 let arg = coalesce_multiplication(*arg);
-                (
-                    Expression::Function(Function::Cot(Box::new(arg.0))),
-                    arg.1,
-                )
+                (Expression::Function(Function::Cot(Box::new(arg.0))), arg.1)
             }
             Function::Arcsin(arg) => {
                 let arg = coalesce_multiplication(*arg);
@@ -779,90 +784,88 @@ fn print_expression(expression: &Expression, indent: i32) {
     match expression {
         Expression::Number(n) => {
             println!("Number: {}", n);
-        },
+        }
         Expression::Variable(v) => {
             println!("Variable: {}", v);
-        },
+        }
         Expression::Multiplication(multiplication) => {
             println!("Multiplication");
             for term in &multiplication.terms {
                 print_expression(term, indent + 1);
             }
-        },
+        }
         Expression::Division(division) => {
             println!("Division");
             print_expression(&division.numerator, indent + 1);
             print_expression(&division.denominator, indent + 1);
-        },
+        }
         Expression::Addition(addition) => {
             println!("Addition");
             for term in &addition.terms {
                 print_expression(term, indent + 1);
             }
-        },
+        }
         Expression::Negation(negation) => {
             println!("Negation");
             print_expression(&negation.term, indent + 1);
-        },
+        }
         Expression::Exponentiation(exponentiation) => {
             println!("Exponentiation");
             print_expression(&exponentiation.base, indent + 1);
             print_expression(&exponentiation.exponent, indent + 1);
-        },
+        }
         Expression::Sqrt(sqrt) => {
             println!("Sqrt");
             print_expression(&sqrt.arg, indent + 1);
-        },
-        Expression::Function(function) => {
-            match function {
-                Function::Sin(arg) => {
-                    println!("Sin");
-                    print_expression(arg, indent + 1);
-                },
-                Function::Cos(arg) => {
-                    println!("Cos");
-                    print_expression(arg, indent + 1);
-                },
-                Function::Tan(arg) => {
-                    println!("Tan");
-                    print_expression(arg, indent + 1);
-                },
-                Function::Csc(arg) => {
-                    println!("Csc");
-                    print_expression(arg, indent + 1);
-                },
-                Function::Sec(arg) => {
-                    println!("Sec");
-                    print_expression(arg, indent + 1);
-                },
-                Function::Cot(arg) => {
-                    println!("Cot");
-                    print_expression(arg, indent + 1);
-                },
-                Function::Arcsin(arg) => {
-                    println!("Arcsin");
-                    print_expression(arg, indent + 1);
-                },
-                Function::Arccos(arg) => {
-                    println!("Arccos");
-                    print_expression(arg, indent + 1);
-                },
-                Function::Arctan(arg) => {
-                    println!("Arctan");
-                    print_expression(arg, indent + 1);
-                },
-                Function::Arccsc(arg) => {
-                    println!("Arccsc");
-                    print_expression(arg, indent + 1);
-                },
-                Function::Arcsec(arg) => {
-                    println!("Arcsec");
-                    print_expression(arg, indent + 1);
-                },
-                Function::Arccot(arg) => {
-                    println!("Arccot");
-                    print_expression(arg, indent + 1);
-                },
+        }
+        Expression::Function(function) => match function {
+            Function::Sin(arg) => {
+                println!("Sin");
+                print_expression(arg, indent + 1);
+            }
+            Function::Cos(arg) => {
+                println!("Cos");
+                print_expression(arg, indent + 1);
+            }
+            Function::Tan(arg) => {
+                println!("Tan");
+                print_expression(arg, indent + 1);
+            }
+            Function::Csc(arg) => {
+                println!("Csc");
+                print_expression(arg, indent + 1);
+            }
+            Function::Sec(arg) => {
+                println!("Sec");
+                print_expression(arg, indent + 1);
+            }
+            Function::Cot(arg) => {
+                println!("Cot");
+                print_expression(arg, indent + 1);
+            }
+            Function::Arcsin(arg) => {
+                println!("Arcsin");
+                print_expression(arg, indent + 1);
+            }
+            Function::Arccos(arg) => {
+                println!("Arccos");
+                print_expression(arg, indent + 1);
+            }
+            Function::Arctan(arg) => {
+                println!("Arctan");
+                print_expression(arg, indent + 1);
+            }
+            Function::Arccsc(arg) => {
+                println!("Arccsc");
+                print_expression(arg, indent + 1);
+            }
+            Function::Arcsec(arg) => {
+                println!("Arcsec");
+                print_expression(arg, indent + 1);
+            }
+            Function::Arccot(arg) => {
+                println!("Arccot");
+                print_expression(arg, indent + 1);
             }
         },
     }
