@@ -5,8 +5,7 @@ permissions:
   contents: read
 on:
   push:
-    branches: [main]
-  pull_request:
+    branches: [master]
   schedule:
     - cron:  '7 7 * * *'
 concurrency:
