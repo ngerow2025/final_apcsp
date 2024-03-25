@@ -27,5 +27,5 @@ Either will give the output on a single line in stdout.
 
 
 # bibliography
-
-Rust Clap
+[rust-ci-conf](https://github.com/jonhoo/rust-ci-conf)
+[Rust Clap](https://github.com/clap-rs/clap)
