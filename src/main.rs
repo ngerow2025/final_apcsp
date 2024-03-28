@@ -181,6 +181,7 @@ enum UnaryOp {
     Sqrt,
 }
 
+#[allow(dead_code)]
 fn print_ast(ast: &ASTNode, indent: i32) {
     print!("{}", "| ".repeat(indent as usize));
     match ast {
@@ -704,95 +705,92 @@ fn tree_walk_pass(
                     arg_simplified && simplified,
                 )
             }
-            Expression::Function(function) => {
-                match function {
-                    Function::Sin(arg) => {
-                        let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
-                        (
-                            Expression::Function(Function::Sin(Box::new(arg))),
-                            arg_simplified && simplified,
-                        )
-                    }
-                    Function::Cos(arg) => {
-                        let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
-                        (
-                            Expression::Function(Function::Cos(Box::new(arg))),
-                            arg_simplified && simplified,
-                        )
-                    }
-                    Function::Tan(arg) => {
-                        let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
-                        (
-                            Expression::Function(Function::Tan(Box::new(arg))),
-                            arg_simplified && simplified,
-                        )
-                    }
-                    Function::Csc(arg) => {
-                        let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
-                        (
-                            Expression::Function(Function::Csc(Box::new(arg))),
-                            arg_simplified && simplified,
-                        )
-                    }
-                    Function::Sec(arg) => {
-                        let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
-                        (
-                            Expression::Function(Function::Sec(Box::new(arg))),
-                            arg_simplified && simplified,
-                        )
-                    }
-                    Function::Cot(arg) => {
-                        let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
-                        (
-                            Expression::Function(Function::Cot(Box::new(arg))),
-                            arg_simplified && simplified,
-                        )
-                    }
-                    Function::Arcsin(arg) => {
-                        let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
-                        (
-                            Expression::Function(Function::Arcsin(Box::new(arg))),
-                            arg_simplified && simplified,
-                        )
-                    }
-                    Function::Arccos(arg) => {
-                        let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
-                        (
-                            Expression::Function(Function::Arccos(Box::new(arg))),
-                            arg_simplified && simplified,
-                        )
-                    }
-                    Function::Arctan(arg) => {
-                        let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
-                        (
-                            Expression::Function(Function::Arctan(Box::new(arg))),
-                            arg_simplified && simplified,
-                        )
-                    }
-                    Function::Arccsc(arg) => {
-                        let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
-                        (
-                            Expression::Function(Function::Arccsc(Box::new(arg))),
-                            arg_simplified && simplified,
-                        )
-                    }
-                    Function::Arcsec(arg) => {
-                        let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
-                        (
-                            Expression::Function(Function::Arcsec(Box::new(arg))),
-                            arg_simplified && simplified,
-                        )
-                    }
-                    Function::Arccot(arg) => {
-                        let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
-                        (
-                            Expression::Function(Function::Arccot(Box::new(arg))),
-                            arg_simplified && simplified,
-                        )
-                    }
+            Expression::Function(function) => match function {
+                Function::Sin(arg) => {
+                    let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
+                    (
+                        Expression::Function(Function::Sin(Box::new(arg))),
+                        arg_simplified && simplified,
+                    )
                 }
-                
-            }
+                Function::Cos(arg) => {
+                    let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
+                    (
+                        Expression::Function(Function::Cos(Box::new(arg))),
+                        arg_simplified && simplified,
+                    )
+                }
+                Function::Tan(arg) => {
+                    let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
+                    (
+                        Expression::Function(Function::Tan(Box::new(arg))),
+                        arg_simplified && simplified,
+                    )
+                }
+                Function::Csc(arg) => {
+                    let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
+                    (
+                        Expression::Function(Function::Csc(Box::new(arg))),
+                        arg_simplified && simplified,
+                    )
+                }
+                Function::Sec(arg) => {
+                    let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
+                    (
+                        Expression::Function(Function::Sec(Box::new(arg))),
+                        arg_simplified && simplified,
+                    )
+                }
+                Function::Cot(arg) => {
+                    let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
+                    (
+                        Expression::Function(Function::Cot(Box::new(arg))),
+                        arg_simplified && simplified,
+                    )
+                }
+                Function::Arcsin(arg) => {
+                    let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
+                    (
+                        Expression::Function(Function::Arcsin(Box::new(arg))),
+                        arg_simplified && simplified,
+                    )
+                }
+                Function::Arccos(arg) => {
+                    let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
+                    (
+                        Expression::Function(Function::Arccos(Box::new(arg))),
+                        arg_simplified && simplified,
+                    )
+                }
+                Function::Arctan(arg) => {
+                    let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
+                    (
+                        Expression::Function(Function::Arctan(Box::new(arg))),
+                        arg_simplified && simplified,
+                    )
+                }
+                Function::Arccsc(arg) => {
+                    let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
+                    (
+                        Expression::Function(Function::Arccsc(Box::new(arg))),
+                        arg_simplified && simplified,
+                    )
+                }
+                Function::Arcsec(arg) => {
+                    let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
+                    (
+                        Expression::Function(Function::Arcsec(Box::new(arg))),
+                        arg_simplified && simplified,
+                    )
+                }
+                Function::Arccot(arg) => {
+                    let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
+                    (
+                        Expression::Function(Function::Arccot(Box::new(arg))),
+                        arg_simplified && simplified,
+                    )
+                }
+            },
             Expression::Number(_) | Expression::Variable(_) => (expression, simplified),
         }
     }
