@@ -1,10 +1,19 @@
 [package]
-name = "final_apcsp"
+name = "rustic_math"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.74"
 
+[[bin]]
+name = "cli"
+path = "src/main.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "rustic_math"
+path = "src/lib.rs"
+
 
 [dependencies]
 clap = "4.5.4"
