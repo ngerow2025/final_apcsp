@@ -584,7 +584,10 @@ fn convert_to_expression(ast: &ASTNode) -> Expression {
 //loops until no more simplifications can be made
 fn simplify_to_standard_form(mut expression: Expression) -> Expression {
     let mut simplified = false;
-    let passes = [tree_walk_pass(&coalesce_multiplication)];
+    let passes = [
+        tree_walk_pass(&coalesce_multiplication),
+        tree_walk_pass(&coalesce_addition),
+    ];
     while !simplified {
         simplified = true;
         for pass in &passes {
@@ -601,9 +604,8 @@ fn tree_walk_pass(
     pass: &dyn Fn(Expression) -> (Expression, bool),
 ) -> impl Fn(Expression) -> (Expression, bool) + '_ {
     move |expression| {
-        let (expression, simplified) = pass(expression);
         //recurse into the expression
-        match expression {
+        let (expr, simplified) = match expression {
             Expression::Multiplication(multiplication) => {
                 let (terms, terms_simplified) = multiplication
                     .terms
@@ -616,7 +618,7 @@ fn tree_walk_pass(
                     });
                 (
                     Expression::Multiplication(Multiplication { terms }),
-                    terms_simplified && simplified,
+                    terms_simplified,
                 )
             }
             Expression::Division(division) => {
@@ -628,7 +630,7 @@ fn tree_walk_pass(
                         numerator: Box::new(numerator),
                         denominator: Box::new(denominator),
                     }),
-                    numerator_simplified && denominator_simplified && simplified,
+                    numerator_simplified && denominator_simplified,
                 )
             }
             Expression::Addition(addition) => {
@@ -641,10 +643,7 @@ fn tree_walk_pass(
                         a.1 &= e.1;
                         a
                     });
-                (
-                    Expression::Addition(Addition { terms }),
-                    terms_simplified && simplified,
-                )
+                (Expression::Addition(Addition { terms }), terms_simplified)
             }
             Expression::Negation(negation) => {
                 let (term, term_simplified) = tree_walk_pass(pass)(*negation.term);
@@ -652,7 +651,7 @@ fn tree_walk_pass(
                     Expression::Negation(Negation {
                         term: Box::new(term),
                     }),
-                    term_simplified && simplified,
+                    term_simplified,
                 )
             }
             Expression::Exponentiation(exponentiation) => {
@@ -664,14 +663,14 @@ fn tree_walk_pass(
                         base: Box::new(base),
                         exponent: Box::new(exponent),
                     }),
-                    base_simplified && exponent_simplified && simplified,
+                    base_simplified && exponent_simplified,
                 )
             }
             Expression::Sqrt(sqrt) => {
                 let (arg, arg_simplified) = tree_walk_pass(pass)(*sqrt.arg);
                 (
                     Expression::Sqrt(Sqrt { arg: Box::new(arg) }),
-                    arg_simplified && simplified,
+                    arg_simplified,
                 )
             }
             Expression::Function(function) => match function {
@@ -679,105 +678,103 @@ fn tree_walk_pass(
                     let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
                     (
                         Expression::Function(Function::Sin(Box::new(arg))),
-                        arg_simplified && simplified,
+                        arg_simplified,
                     )
                 }
                 Function::Cos(arg) => {
                     let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
                     (
                         Expression::Function(Function::Cos(Box::new(arg))),
-                        arg_simplified && simplified,
+                        arg_simplified,
                     )
                 }
                 Function::Tan(arg) => {
                     let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
                     (
                         Expression::Function(Function::Tan(Box::new(arg))),
-                        arg_simplified && simplified,
+                        arg_simplified,
                     )
                 }
                 Function::Csc(arg) => {
                     let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
                     (
                         Expression::Function(Function::Csc(Box::new(arg))),
-                        arg_simplified && simplified,
+                        arg_simplified,
                     )
                 }
                 Function::Sec(arg) => {
                     let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
                     (
                         Expression::Function(Function::Sec(Box::new(arg))),
-                        arg_simplified && simplified,
+                        arg_simplified,
                     )
                 }
                 Function::Cot(arg) => {
                     let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
                     (
                         Expression::Function(Function::Cot(Box::new(arg))),
-                        arg_simplified && simplified,
+                        arg_simplified,
                     )
                 }
                 Function::Arcsin(arg) => {
                     let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
                     (
                         Expression::Function(Function::Arcsin(Box::new(arg))),
-                        arg_simplified && simplified,
+                        arg_simplified,
                     )
                 }
                 Function::Arccos(arg) => {
                     let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
                     (
                         Expression::Function(Function::Arccos(Box::new(arg))),
-                        arg_simplified && simplified,
+                        arg_simplified,
                     )
                 }
                 Function::Arctan(arg) => {
                     let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
                     (
                         Expression::Function(Function::Arctan(Box::new(arg))),
-                        arg_simplified && simplified,
+                        arg_simplified,
                     )
                 }
                 Function::Arccsc(arg) => {
                     let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
                     (
                         Expression::Function(Function::Arccsc(Box::new(arg))),
-                        arg_simplified && simplified,
+                        arg_simplified,
                     )
                 }
                 Function::Arcsec(arg) => {
                     let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
                     (
                         Expression::Function(Function::Arcsec(Box::new(arg))),
-                        arg_simplified && simplified,
+                        arg_simplified,
                     )
                 }
                 Function::Arccot(arg) => {
                     let (arg, arg_simplified) = tree_walk_pass(pass)(*arg);
                     (
                         Expression::Function(Function::Arccot(Box::new(arg))),
-                        arg_simplified && simplified,
+                        arg_simplified,
                     )
                 }
             },
-            Expression::Number(_) | Expression::Variable(_) => (expression, simplified),
-        }
+            Expression::Number(_) | Expression::Variable(_) => (expression, true),
+        };
+        let (self_expression, self_simplified) = pass(expr);
+        (self_expression, simplified && self_simplified)
     }
 }
 
 fn coalesce_multiplication(expression: Expression) -> (Expression, bool) {
     match expression {
         Expression::Multiplication(multiplication) => {
-            println!("running coalesce_multiplication pass");
             let mut simplified = true;
             let terms = multiplication
                 .terms
                 .into_iter()
                 .flat_map(|term| match *term {
                     Expression::Multiplication(inner_multiplication) => {
-                        if simplified {
-                            println!("found a nested multiplication, coalescing")
-                        }
                         simplified = false;
                         inner_multiplication.terms
                     }
@@ -788,6 +785,27 @@ fn coalesce_multiplication(expression: Expression) -> (Expression, bool) {
                 Expression::Multiplication(Multiplication { terms }),
                 simplified,
             )
+        }
+        _ => (expression, true),
+    }
+}
+
+fn coalesce_addition(expression: Expression) -> (Expression, bool) {
+    match expression {
+        Expression::Addition(addition) => {
+            let mut simplified = true;
+            let terms = addition
+                .terms
+                .into_iter()
+                .flat_map(|term| match *term {
+                    Expression::Addition(inner_addition) => {
+                        simplified = false;
+                        inner_addition.terms
+                    }
+                    _ => vec![term],
+                })
+                .collect::<Vec<_>>();
+            (Expression::Addition(Addition { terms }), simplified)
         }
         _ => (expression, true),
     }
