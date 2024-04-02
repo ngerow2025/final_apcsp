@@ -233,22 +233,22 @@ fn shunting_yard_to_binary_op(op: ShuntingYardStack) -> BinaryOp {
     }
 }
 
-fn shunting_yard_to_unary_op(op: ShuntingYardStack) -> UnaryOp {
+fn shunting_yard_to_unary_op(op: ShuntingYardStack) -> Option<UnaryOp> {
     match op {
-        ShuntingYardStack::Sin => UnaryOp::Sin,
-        ShuntingYardStack::Cos => UnaryOp::Cos,
-        ShuntingYardStack::Tan => UnaryOp::Tan,
-        ShuntingYardStack::Csc => UnaryOp::Csc,
-        ShuntingYardStack::Sec => UnaryOp::Sec,
-        ShuntingYardStack::Cot => UnaryOp::Cot,
-        ShuntingYardStack::Arcsin => UnaryOp::Arcsin,
-        ShuntingYardStack::Arccos => UnaryOp::Arccos,
-        ShuntingYardStack::Arctan => UnaryOp::Arctan,
-        ShuntingYardStack::Arccsc => UnaryOp::Arccsc,
-        ShuntingYardStack::Arcsec => UnaryOp::Arcsec,
-        ShuntingYardStack::Arccot => UnaryOp::Arccot,
-        ShuntingYardStack::Sqrt => UnaryOp::Sqrt,
-        _ => panic!("Invalid ShuntingYardStack to UnaryOp conversion"),
+        ShuntingYardStack::Sin => Some(UnaryOp::Sin),
+        ShuntingYardStack::Cos => Some(UnaryOp::Cos),
+        ShuntingYardStack::Tan => Some(UnaryOp::Tan),
+        ShuntingYardStack::Csc => Some(UnaryOp::Csc),
+        ShuntingYardStack::Sec => Some(UnaryOp::Sec),
+        ShuntingYardStack::Cot => Some(UnaryOp::Cot),
+        ShuntingYardStack::Arcsin => Some(UnaryOp::Arcsin),
+        ShuntingYardStack::Arccos => Some(UnaryOp::Arccos),
+        ShuntingYardStack::Arctan => Some(UnaryOp::Arctan),
+        ShuntingYardStack::Arccsc => Some(UnaryOp::Arccsc),
+        ShuntingYardStack::Arcsec => Some(UnaryOp::Arcsec),
+        ShuntingYardStack::Arccot => Some(UnaryOp::Arccot),
+        ShuntingYardStack::Sqrt => Some(UnaryOp::Sqrt),
+        _ => None,
     }
 }
 
@@ -394,10 +394,12 @@ pub fn parse(tokens: Vec<Token>) -> Vec<ASTNode> {
                 }
                 stack.pop();
                 //handle functions
-                if let Some(op) = stack.pop() {
-                    let arg = Box::new(expression_output.pop_back().unwrap());
-                    expression_output
-                        .push_back(ASTNode::UnaryOp(arg, shunting_yard_to_unary_op(op)));
+                if let Some(op) = stack.last() {
+                    if let Some(unary_op) = shunting_yard_to_unary_op(*op) {
+                        stack.pop();
+                        let arg = Box::new(expression_output.pop_back().unwrap());
+                        expression_output.push_back(ASTNode::UnaryOp(arg, unary_op));
+                    }
                 }
             }
             Token::Number(n) => {
