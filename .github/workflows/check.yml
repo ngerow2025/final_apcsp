@@ -108,5 +108,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.msrv }}
+      - name: cargo +${{ matrix.msrv }} clean and update
+        run: cargo +${{ matrix.msrv }} clean && cargo +${{ matrix.msrv }} update
       - name: cargo +${{ matrix.msrv }} check
         run: cargo check
