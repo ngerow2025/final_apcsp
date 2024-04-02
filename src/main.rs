@@ -1,7 +1,7 @@
 //Clap is a command line argument parser made freely available by the MIT license at https://github.com/clap-rs/clap
 //Rustyline is a readline library made freely available by the MIT license at https://github.com/kkawakam/rustyline
 
-use rustic_math::{parse, print_expression, simplify, tokenize};
+use rustic_math::{eval, parse, print_expression, simplify, tokenize};
 use rustyline::DefaultEditor;
 
 fn main() {
@@ -36,7 +36,7 @@ fn solve(input: String) -> f64 {
     let tokens = tokenize(input);
     let ast = parse(tokens);
     let simplified = simplify(&ast[0]);
-    println!("Solving:");
-    print_expression(&simplified, 0);
-    0.0
+    let result = eval(&simplified);
+    // print_expression(&simplified, 0);
+    result
 }

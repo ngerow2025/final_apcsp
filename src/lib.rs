@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+mod factored;
 
 #[derive(Debug, Clone)]
 pub enum Token {
@@ -591,6 +592,7 @@ fn simplify_to_standard_form(mut expression: Expression) -> Expression {
         tree_walk_pass(&coalesce_addition),
         tree_walk_pass(&distribute_multiplication),
     ];
+
     while !simplified {
         simplified = true;
         for pass in &passes {
@@ -1010,6 +1012,35 @@ pub fn print_expression(expression: &Expression, indent: i32) {
                 println!("Arccot");
                 print_expression(arg, indent + 1);
             }
+        },
+    }
+}
+
+pub fn eval(expr: &Expression) -> f64{
+    match expr {
+        Expression::Number(n) => *n,
+        Expression::Variable(_) => panic!("Cannot evaluate variable"),
+        Expression::Multiplication(multiplication) => {
+            multiplication.terms.iter().map(|term| eval(term)).product()
+        }
+        Expression::Division(division) => eval(&division.numerator) / eval(&division.denominator),
+        Expression::Addition(addition) => addition.terms.iter().map(|term| eval(term)).sum(),
+        Expression::Negation(negation) => -eval(&negation.term),
+        Expression::Exponentiation(exponentiation) => eval(&exponentiation.base).powf(eval(&exponentiation.exponent)),
+        Expression::Sqrt(sqrt) => eval(&sqrt.arg).sqrt(),
+        Expression::Function(function) => match function {
+            Function::Sin(arg) => eval(arg).sin(),
+            Function::Cos(arg) => eval(arg).cos(),
+            Function::Tan(arg) => eval(arg).tan(),
+            Function::Csc(arg) => 1.0 / eval(arg).sin(),
+            Function::Sec(arg) => 1.0 / eval(arg).cos(),
+            Function::Cot(arg) => 1.0 / eval(arg).tan(),
+            Function::Arcsin(arg) => eval(arg).asin(),
+            Function::Arccos(arg) => eval(arg).acos(),
+            Function::Arctan(arg) => eval(arg).atan(),
+            Function::Arccsc(arg) => 1.0 / eval(arg).asin(),
+            Function::Arcsec(arg) => 1.0 / eval(arg).acos(),
+            Function::Arccot(arg) => 1.0 / eval(arg).atan(),
         },
     }
 }
