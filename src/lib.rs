@@ -589,6 +589,7 @@ fn simplify_to_standard_form(mut expression: Expression) -> Expression {
     let passes = [
         tree_walk_pass(&coalesce_multiplication),
         tree_walk_pass(&coalesce_addition),
+        tree_walk_pass(&distribute_multiplication),
     ];
     while !simplified {
         simplified = true;
@@ -812,6 +813,114 @@ fn coalesce_addition(expression: Expression) -> (Expression, bool) {
         _ => (expression, true),
     }
 }
+
+fn deep_copy(expression: &Expression) -> Expression {
+    match expression {
+        Expression::Number(n) => Expression::Number(*n),
+        Expression::Variable(v) => Expression::Variable(v.clone()),
+        Expression::Multiplication(multiplication) => Expression::Multiplication(Multiplication {
+            terms: multiplication
+                .terms
+                .iter()
+                .map(|term| Box::new(deep_copy(term)))
+                .collect(),
+        }),
+        Expression::Division(division) => Expression::Division(Division {
+            numerator: Box::new(deep_copy(&division.numerator)),
+            denominator: Box::new(deep_copy(&division.denominator)),
+        }),
+        Expression::Addition(addition) => Expression::Addition(Addition {
+            terms: addition
+                .terms
+                .iter()
+                .map(|term| Box::new(deep_copy(term)))
+                .collect(),
+        }),
+        Expression::Negation(negation) => Expression::Negation(Negation {
+            term: Box::new(deep_copy(&negation.term)),
+        }),
+        Expression::Exponentiation(exponentiation) => Expression::Exponentiation(Exponentiation {
+            base: Box::new(deep_copy(&exponentiation.base)),
+            exponent: Box::new(deep_copy(&exponentiation.exponent)),
+        }),
+        Expression::Sqrt(sqrt) => Expression::Sqrt(Sqrt {
+            arg: Box::new(deep_copy(&sqrt.arg)),
+        }),
+        Expression::Function(function) => match function {
+            Function::Sin(arg) => Expression::Function(Function::Sin(Box::new(deep_copy(arg)))),
+            Function::Cos(arg) => Expression::Function(Function::Cos(Box::new(deep_copy(arg)))),
+            Function::Tan(arg) => Expression::Function(Function::Tan(Box::new(deep_copy(arg)))),
+            Function::Csc(arg) => Expression::Function(Function::Csc(Box::new(deep_copy(arg)))),
+            Function::Sec(arg) => Expression::Function(Function::Sec(Box::new(deep_copy(arg)))),
+            Function::Cot(arg) => Expression::Function(Function::Cot(Box::new(deep_copy(arg)))),
+            Function::Arcsin(arg) => {
+                Expression::Function(Function::Arcsin(Box::new(deep_copy(arg))))
+            }
+            Function::Arccos(arg) => {
+                Expression::Function(Function::Arccos(Box::new(deep_copy(arg))))
+            }
+            Function::Arctan(arg) => {
+                Expression::Function(Function::Arctan(Box::new(deep_copy(arg))))
+            }
+            Function::Arccsc(arg) => {
+                Expression::Function(Function::Arccsc(Box::new(deep_copy(arg))))
+            }
+            Function::Arcsec(arg) => {
+                Expression::Function(Function::Arcsec(Box::new(deep_copy(arg))))
+            }
+            Function::Arccot(arg) => {
+                Expression::Function(Function::Arccot(Box::new(deep_copy(arg))))
+            }
+        },
+    }
+}
+
+fn distribute_multiplication(expression: Expression) -> (Expression, bool) {
+    match expression {
+        Expression::Multiplication(mut multiplication) => {
+            // 5 * (3 + 5) -> (5 * 3) + (5 * 5)
+
+            // 6 * (2 + 3) * (4 + 5) ->
+            // ((6 * 2) + (6 * 3)) * (4 + 5) ->
+            // (((6 * 2) + (6 * 3)) * 4) + (((6 * 2) + (6 * 3)) * 5) ->
+            // ((6 * 2 * 4) + (6 * 3 * 4)) + ((6 * 2 * 5) + (6 * 3 * 5))
+            // (6 * 2 * 4) + (6 * 3 * 4) + (6 * 2 * 5) + (6 * 3 * 5)
+
+            // find first addition in terms and distribute
+            // in general a * (b + c) -> (a * b) + (a * c)
+            // where a is all the other terms in the multiplication multiplied together
+
+            // find the first addition in the terms
+            let addition_index = multiplication
+                .terms
+                .iter()
+                .position(|term| matches!(**term, Expression::Addition(_)));
+
+            if let Some(addition_index) = addition_index {
+                if let Expression::Addition(addition) =
+                    *multiplication.terms.swap_remove(addition_index)
+                {
+                    let mut terms = Vec::new();
+                    for term in addition.terms {
+                        let mut new_terms: Vec<Box<Expression>> = multiplication
+                            .terms
+                            .iter()
+                            .map(|e| Box::new(deep_copy(e)))
+                            .collect();
+                        new_terms.push(term);
+                        terms.push(Box::new(Expression::Multiplication(Multiplication {
+                            terms: new_terms,
+                        })));
+                    }
+                    return (Expression::Addition(Addition { terms }), false);
+                }
+            };
+            (Expression::Multiplication(multiplication), true)
+        }
+        _ => (expression, true),
+    }
+}
+
 
 pub fn print_expression(expression: &Expression, indent: i32) {
     print!("{}", "| ".repeat(indent as usize));
