@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'final_apcsp'",
+            "name": "Debug executable 'rustic_math'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=final_apcsp",
-                    "--package=final_apcsp"
+                    "--bin=cli",
+                    "--package=rustic_math"
                 ],
                 "filter": {
-                    "name": "final_apcsp",
+                    "name": "cli",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'final_apcsp'",
+            "name": "Debug unit tests in executable 'rustic_math'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=final_apcsp",
-                    "--package=final_apcsp"
+                    "--bin=cli",
+                    "--package=rustic_math"
                 ],
                 "filter": {
-                    "name": "final_apcsp",
+                    "name": "cli",
                     "kind": "bin"
                 }
             },

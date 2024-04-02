@@ -1,26 +1,35 @@
 //Clap is a command line argument parser made freely available by the MIT license at https://github.com/clap-rs/clap
-use std::io::Write;
+//Rustyline is a readline library made freely available by the MIT license at https://github.com/kkawakam/rustyline
 
 use rustic_math::{parse, print_expression, simplify, tokenize};
+use rustyline::DefaultEditor;
 
 fn main() {
     println!("Welcome to the mathmatical solver, please enter an expression: ");
+    let mut rl = DefaultEditor::new().unwrap();
+    let _ = rl.load_history("history.txt");
     loop {
-        main_loop();
+        main_loop(&mut rl);
     }
 }
 
-fn main_loop() {
-    print!("> ");
-    std::io::stdout().flush().unwrap();
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input).unwrap();
-    let input = input.trim().to_owned();
-    if input == "exit" {
-        std::process::exit(0);
+fn main_loop(rl: &mut DefaultEditor) {
+    let input = rl.readline(">> ");
+    match input {
+        Ok(input) => {
+            rl.add_history_entry(input.clone()).unwrap();
+            if input == "exit" {
+                rl.save_history("history.txt").unwrap();
+                std::process::exit(0);
+            }
+            let result = solve(input);
+            println!("Result: {}", result);
+        }
+        Err(_) => {
+            rl.save_history("history.txt").unwrap();
+            std::process::exit(0);
+        }
     }
-    let result = solve(input);
-    println!("Result: {}", result);
 }
 
 fn solve(input: String) -> f64 {
