@@ -76,6 +76,9 @@ impl FactoredNumber {
     }
 }
 
+
+
+
 fn main() {
     let f = FactoredNumber::from_number(928375013864346);
     println!("{:?}", f);
