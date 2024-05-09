@@ -816,6 +816,8 @@ fn coalesce_addition(expression: Expression) -> (Expression, bool) {
     }
 }
 
+// This coppies an Expression and all of the nodes that that is in its tree in order to make two independent Epressions that are identical.
+// Most cases should not use this and should try to use no-copy algorithms
 fn deep_copy(expression: &Expression) -> Expression {
     match expression {
         Expression::Number(n) => Expression::Number(*n),
