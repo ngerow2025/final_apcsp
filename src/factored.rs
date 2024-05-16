@@ -1,11 +1,11 @@
-use std::sync::Mutex;
+use std::{cmp::max, ops::{Add, Div, Mul, Sub}, sync::Mutex};
 
 use lazy_static::lazy_static;
 
 // represents an integer by its prime factors
 #[derive(Debug)]
 pub struct FactoredNumber {
-    factors: Vec<u64>
+    factors: Vec<i64>
 }
 
 lazy_static! {
@@ -76,10 +76,70 @@ impl FactoredNumber {
     }
 }
 
+//multiplication for FactoredNumber
+//just add the factors
+impl Mul for FactoredNumber {
+    type Output = FactoredNumber;
 
+    fn mul(self, other: FactoredNumber) -> FactoredNumber {
+        let mut factors = Vec::new();
+        for i in 0..max(self.factors.len(), other.factors.len()) {
+            factors.push(
+                if i < self.factors.len() {
+                    self.factors[i]
+                } else {
+                    0
+                } + if i < other.factors.len() {
+                    other.factors[i]
+                } else {
+                    0
+                }
+            );
+        }
+        FactoredNumber {
+            factors: factors,
+        }
+    }
+}
 
+//division for FactoredNumber
+//just subtract the factors
+impl Div for FactoredNumber {
+    type Output = FactoredNumber;
 
-fn main() {
-    let f = FactoredNumber::from_number(928375013864346);
-    println!("{:?}", f);
+    fn div(self, other: FactoredNumber) -> FactoredNumber {
+        let mut factors = Vec::new();
+        for i in 0..max(self.factors.len(), other.factors.len()) {
+            factors.push(
+                if i < self.factors.len() {
+                    self.factors[i]
+                } else {
+                    0
+                } - if i < other.factors.len() {
+                    other.factors[i]
+                } else {
+                    0
+                }
+            );
+        }
+        FactoredNumber {
+            factors: factors,
+        }
+    }
+}
+
+impl Add for FactoredNumber {
+    type Output = FactoredNumber;
+
+    fn add(self, other: FactoredNumber) -> FactoredNumber {
+        FactoredNumber::from_number(self.to_number() + other.to_number())
+    }
+}
+
+impl Sub for FactoredNumber {
+    type Output = FactoredNumber;
+
+    fn sub(self, other: FactoredNumber) -> FactoredNumber {
+        FactoredNumber::from_number(self.to_number() - other.to_number())
+    }
 }
