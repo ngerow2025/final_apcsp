@@ -64,7 +64,7 @@ impl FactoredNumber {
             i += 1;
         }
         FactoredNumber {
-            factors: factors,
+            factors,
         }
     }
     pub fn to_number(&self) -> u64 {
@@ -97,7 +97,7 @@ impl Mul for FactoredNumber {
             );
         }
         FactoredNumber {
-            factors: factors,
+            factors,
         }
     }
 }
@@ -123,7 +123,7 @@ impl Div for FactoredNumber {
             );
         }
         FactoredNumber {
-            factors: factors,
+            factors,
         }
     }
 }
