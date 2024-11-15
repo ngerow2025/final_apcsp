@@ -18,4 +18,4 @@ path = "src/lib.rs"
 [dependencies]
 clap = "4.5.4"
 lazy_static = "1.4.0"
-rustyline = "14.0.0"
+rustyline = "15.0.0"
