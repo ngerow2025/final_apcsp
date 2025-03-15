@@ -131,6 +131,7 @@ pub fn convert_to_expression(ast: &ASTNode) -> Expression {
                 UnaryOp::Arcsec => Expression::Function(Function::Arcsec(Box::new(arg))),
                 UnaryOp::Arccot => Expression::Function(Function::Arccot(Box::new(arg))),
                 UnaryOp::Sqrt => Expression::Sqrt(Sqrt { arg: Box::new(arg) }),
+                UnaryOp::Negate => Expression::Negation(Negation { term: Box::new(arg) }),
             }
         }
     }
@@ -199,31 +200,92 @@ pub fn deep_copy(expression: &Expression) -> Expression {
     }
 }
 
-pub fn eval(expr: &Expression) -> f64{
+pub fn eval(expr: &Expression) -> Result<f64, String> {
     match expr {
-        Expression::Number(n) => *n,
-        Expression::Variable(_) => panic!("Cannot evaluate variable"),
-        Expression::Multiplication(multiplication) => {
-            multiplication.terms.iter().map(|term| eval(term)).product()
+        Expression::Number(n) => Ok(*n),
+        Expression::Variable(_) => Err("Cannot evaluate variable".to_string()),
+        Expression::Multiplication(multiplication) => multiplication
+            .terms
+            .iter()
+            .map(|term| eval(term))
+            .try_fold(1.0, |acc, res| res.map(|val| acc * val)),
+        Expression::Division(division) => {
+            let numerator = eval(&division.numerator)?;
+            let denominator = eval(&division.denominator)?;
+            if denominator == 0.0 {
+                Err("Division by zero".to_string())
+            } else {
+                Ok(numerator / denominator)
+            }
         }
-        Expression::Division(division) => eval(&division.numerator) / eval(&division.denominator),
-        Expression::Addition(addition) => addition.terms.iter().map(|term| eval(term)).sum(),
-        Expression::Negation(negation) => -eval(&negation.term),
-        Expression::Exponentiation(exponentiation) => eval(&exponentiation.base).powf(eval(&exponentiation.exponent)),
-        Expression::Sqrt(sqrt) => eval(&sqrt.arg).sqrt(),
+        Expression::Addition(addition) => addition
+            .terms
+            .iter()
+            .map(|term| eval(term))
+            .try_fold(0.0, |acc, res| res.map(|val| acc + val)),
+        Expression::Negation(negation) => eval(&negation.term).map(|val| -val),
+        Expression::Exponentiation(exponentiation) => {
+            let base = eval(&exponentiation.base)?;
+            let exponent = eval(&exponentiation.exponent)?;
+            Ok(base.powf(exponent))
+        }
+        Expression::Sqrt(sqrt) => {
+            let arg = eval(&sqrt.arg)?;
+            if arg < 0.0 {
+                Err("Square root of a negative number".to_string())
+            } else {
+                Ok(arg.sqrt())
+            }
+        }
         Expression::Function(function) => match function {
-            Function::Sin(arg) => eval(arg).sin(),
-            Function::Cos(arg) => eval(arg).cos(),
-            Function::Tan(arg) => eval(arg).tan(),
-            Function::Csc(arg) => 1.0 / eval(arg).sin(),
-            Function::Sec(arg) => 1.0 / eval(arg).cos(),
-            Function::Cot(arg) => 1.0 / eval(arg).tan(),
-            Function::Arcsin(arg) => eval(arg).asin(),
-            Function::Arccos(arg) => eval(arg).acos(),
-            Function::Arctan(arg) => eval(arg).atan(),
-            Function::Arccsc(arg) => 1.0 / eval(arg).asin(),
-            Function::Arcsec(arg) => 1.0 / eval(arg).acos(),
-            Function::Arccot(arg) => 1.0 / eval(arg).atan(),
+            Function::Sin(arg) => eval(arg).map(|val| val.sin()),
+            Function::Cos(arg) => eval(arg).map(|val| val.cos()),
+            Function::Tan(arg) => eval(arg).map(|val| val.tan()),
+            Function::Csc(arg) => eval(arg).and_then(|val| {
+                if val.sin() == 0.0 {
+                    Err("Cosecant undefined for this input".to_string())
+                } else {
+                    Ok(1.0 / val.sin())
+                }
+            }),
+            Function::Sec(arg) => eval(arg).and_then(|val| {
+                if val.cos() == 0.0 {
+                    Err("Secant undefined for this input".to_string())
+                } else {
+                    Ok(1.0 / val.cos())
+                }
+            }),
+            Function::Cot(arg) => eval(arg).and_then(|val| {
+                if val.tan() == 0.0 {
+                    Err("Cotangent undefined for this input".to_string())
+                } else {
+                    Ok(1.0 / val.tan())
+                }
+            }),
+            Function::Arcsin(arg) => eval(arg).map(|val| val.asin()),
+            Function::Arccos(arg) => eval(arg).map(|val| val.acos()),
+            Function::Arctan(arg) => eval(arg).map(|val| val.atan()),
+            Function::Arccsc(arg) => eval(arg).and_then(|val| {
+                if val == 0.0 {
+                    Err("Arccosecant undefined for zero".to_string())
+                } else {
+                    Ok(1.0 / val.asin())
+                }
+            }),
+            Function::Arcsec(arg) => eval(arg).and_then(|val| {
+                if val == 0.0 {
+                    Err("Arcsecant undefined for zero".to_string())
+                } else {
+                    Ok(1.0 / val.acos())
+                }
+            }),
+            Function::Arccot(arg) => eval(arg).and_then(|val| {
+                if val == 0.0 {
+                    Err("Arccotangent undefined for zero".to_string())
+                } else {
+                    Ok(1.0 / val.atan())
+                }
+            }),
         },
     }
 }

@@ -1,4 +1,4 @@
-# Equation Analizyer
+# Equation Analyzer
 
 This Rust based project takes in user input in the form of a mathematical expression or equation and simplifies it.
 
@@ -7,7 +7,7 @@ This Rust based project takes in user input in the form of a mathematical expres
 ### interactive mode
 Run
 * `cargo run --release` if you downloaded the code or
-* `./final_apcsp` if you downloaded the execuable file
+* `./final_apcsp` if you downloaded the executable file
 
 To input this equation in interactive mode:
 

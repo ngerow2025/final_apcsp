@@ -1,7 +1,6 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque};
 
 use crate::expression::{convert_to_expression, Expression};
-
 
 #[derive(Debug, Clone)]
 pub enum Token {
@@ -139,6 +138,7 @@ pub enum BinaryOp {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOp {
+    Negate,
     Sin,
     Cos,
     Tan,
@@ -175,10 +175,12 @@ enum ShuntingYardStack {
     Arcsec,
     Arccot,
     Sqrt,
+    UnaryMinus,
 }
 
 fn get_precedence(op: ShuntingYardStack) -> i32 {
     match op {
+        ShuntingYardStack::UnaryMinus => 4,
         ShuntingYardStack::Add => 1,
         ShuntingYardStack::Subtract => 1,
         ShuntingYardStack::Multiply => 2,
@@ -208,7 +210,7 @@ fn shunting_yard_to_binary_op(op: ShuntingYardStack) -> BinaryOp {
         ShuntingYardStack::Multiply => BinaryOp::Multiply,
         ShuntingYardStack::Divide => BinaryOp::Divide,
         ShuntingYardStack::Pow => BinaryOp::Pow,
-        _ => panic!("Invalid ShuntingYardStack to BinaryOp conversion"),
+        _ => panic!("Invalid ShuntingYardStack to BinaryOp conversion: {:?}", op),
     }
 }
 
@@ -227,6 +229,7 @@ fn shunting_yard_to_unary_op(op: ShuntingYardStack) -> Option<UnaryOp> {
         ShuntingYardStack::Arcsec => Some(UnaryOp::Arcsec),
         ShuntingYardStack::Arccot => Some(UnaryOp::Arccot),
         ShuntingYardStack::Sqrt => Some(UnaryOp::Sqrt),
+        ShuntingYardStack::UnaryMinus => Some(UnaryOp::Negate),
         _ => None,
     }
 }
@@ -236,6 +239,7 @@ pub fn parse(tokens: Vec<Token>) -> Vec<Expression> {
     let mut stack = Vec::new();
     let mut expression_output: VecDeque<_> = VecDeque::new();
     let mut true_output = Vec::new();
+    let mut prev_token: Option<Token> = None; // Track previous token
 
     for token in tokens {
         match token {
@@ -245,13 +249,24 @@ pub fn parse(tokens: Vec<Token>) -> Vec<Expression> {
                     && get_precedence(*stack.last().unwrap())
                         >= get_precedence(ShuntingYardStack::Multiply)
                 {
-                    let rhs = Box::new(expression_output.pop_back().unwrap());
-                    let lhs = Box::new(expression_output.pop_back().unwrap());
-                    expression_output.push_back(ASTNode::BinaryOp(
-                        lhs,
-                        rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap()),
-                    ));
+                    let op = stack.pop().unwrap();
+                    match shunting_yard_to_unary_op(op) {
+                        Some(unary_op) => {
+                            // Handle unary operator
+                            let operand = Box::new(expression_output.pop_back().unwrap());
+                            expression_output.push_back(ASTNode::UnaryOp(operand, unary_op));
+                        }
+                        None => {
+                            // Handle binary operator
+                            let rhs = Box::new(expression_output.pop_back().unwrap());
+                            let lhs = Box::new(expression_output.pop_back().unwrap());
+                            expression_output.push_back(ASTNode::BinaryOp(
+                                lhs,
+                                rhs,
+                                shunting_yard_to_binary_op(op),
+                            ));
+                        }
+                    }
                 }
                 stack.push(ShuntingYardStack::Multiply);
             }
@@ -261,31 +276,94 @@ pub fn parse(tokens: Vec<Token>) -> Vec<Expression> {
                     && get_precedence(*stack.last().unwrap())
                         >= get_precedence(ShuntingYardStack::Add)
                 {
-                    let rhs = Box::new(expression_output.pop_back().unwrap());
-                    let lhs = Box::new(expression_output.pop_back().unwrap());
-                    expression_output.push_back(ASTNode::BinaryOp(
-                        lhs,
-                        rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap()),
-                    ));
+                    let op = stack.pop().unwrap();
+                    match shunting_yard_to_unary_op(op) {
+                        Some(unary_op) => {
+                            // Handle unary operator
+                            let operand = Box::new(expression_output.pop_back().unwrap());
+                            expression_output.push_back(ASTNode::UnaryOp(operand, unary_op));
+                        }
+                        None => {
+                            // Handle binary operator
+                            let rhs = Box::new(expression_output.pop_back().unwrap());
+                            let lhs = Box::new(expression_output.pop_back().unwrap());
+                            expression_output.push_back(ASTNode::BinaryOp(
+                                lhs,
+                                rhs,
+                                shunting_yard_to_binary_op(op),
+                            ));
+                        }
+                    }
                 }
                 stack.push(ShuntingYardStack::Add);
             }
             Token::Minus => {
-                //compare to the top of the stack
-                while !stack.is_empty()
-                    && get_precedence(*stack.last().unwrap())
-                        >= get_precedence(ShuntingYardStack::Subtract)
-                {
-                    let rhs = Box::new(expression_output.pop_back().unwrap());
-                    let lhs = Box::new(expression_output.pop_back().unwrap());
-                    expression_output.push_back(ASTNode::BinaryOp(
-                        lhs,
-                        rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap()),
-                    ));
+                // Determine if this is a unary minus based on previous token
+                let is_unary = match prev_token {
+                    None => true, // First token in expression
+                    Some(Token::OpenParen)
+                    | Some(Token::Plus)
+                    | Some(Token::Minus)
+                    | Some(Token::Multiply)
+                    | Some(Token::Divide)
+                    | Some(Token::Pow)
+                    | Some(Token::Equals) => true,
+                    _ => false,
+                };
+
+                if is_unary {
+                    // Handle unary negation (high precedence)
+                    while !stack.is_empty()
+                        && get_precedence(*stack.last().unwrap())
+                            >= get_precedence(ShuntingYardStack::UnaryMinus)
+                    {
+                        let op = stack.pop().unwrap();
+                        match shunting_yard_to_unary_op(op) {
+                            Some(unary_op) => {
+                                // Handle unary operator
+                                let operand = Box::new(expression_output.pop_back().unwrap());
+                                expression_output.push_back(ASTNode::UnaryOp(operand, unary_op));
+                            }
+                            None => {
+                                // Handle binary operator
+                                let rhs = Box::new(expression_output.pop_back().unwrap());
+                                let lhs = Box::new(expression_output.pop_back().unwrap());
+                                expression_output.push_back(ASTNode::BinaryOp(
+                                    lhs,
+                                    rhs,
+                                    shunting_yard_to_binary_op(op),
+                                ));
+                            }
+                        }
+                    }
+                    stack.push(ShuntingYardStack::UnaryMinus);
+                } else {
+                    // Handle binary subtraction (normal precedence)
+                    while !stack.is_empty()
+                        && get_precedence(*stack.last().unwrap())
+                            >= get_precedence(ShuntingYardStack::Subtract)
+                    {
+                        let op = stack.pop().unwrap();
+                        match shunting_yard_to_unary_op(op) {
+                            Some(unary_op) => {
+                                // Handle unary operator
+                                let operand = Box::new(expression_output.pop_back().unwrap());
+                                expression_output.push_back(ASTNode::UnaryOp(operand, unary_op));
+                            }
+                            None => {
+                                // Handle binary operator
+                                let rhs = Box::new(expression_output.pop_back().unwrap());
+                                let lhs = Box::new(expression_output.pop_back().unwrap());
+                                expression_output.push_back(ASTNode::BinaryOp(
+                                    lhs,
+                                    rhs,
+                                    shunting_yard_to_binary_op(op),
+                                ));
+                            }
+                        }
+                    }
+                    stack.push(ShuntingYardStack::Subtract);
                 }
-                stack.push(ShuntingYardStack::Subtract);
             }
             Token::Divide => {
                 //compare to the top of the stack
@@ -293,13 +371,24 @@ pub fn parse(tokens: Vec<Token>) -> Vec<Expression> {
                     && get_precedence(*stack.last().unwrap())
                         >= get_precedence(ShuntingYardStack::Divide)
                 {
-                    let rhs = Box::new(expression_output.pop_back().unwrap());
-                    let lhs = Box::new(expression_output.pop_back().unwrap());
-                    expression_output.push_back(ASTNode::BinaryOp(
-                        lhs,
-                        rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap()),
-                    ));
+                    let op = stack.pop().unwrap();
+                    match shunting_yard_to_unary_op(op) {
+                        Some(unary_op) => {
+                            // Handle unary operator
+                            let operand = Box::new(expression_output.pop_back().unwrap());
+                            expression_output.push_back(ASTNode::UnaryOp(operand, unary_op));
+                        }
+                        None => {
+                            // Handle binary operator
+                            let rhs = Box::new(expression_output.pop_back().unwrap());
+                            let lhs = Box::new(expression_output.pop_back().unwrap());
+                            expression_output.push_back(ASTNode::BinaryOp(
+                                lhs,
+                                rhs,
+                                shunting_yard_to_binary_op(op),
+                            ));
+                        }
+                    }
                 }
                 stack.push(ShuntingYardStack::Divide);
             }
@@ -309,13 +398,24 @@ pub fn parse(tokens: Vec<Token>) -> Vec<Expression> {
                     && get_precedence(*stack.last().unwrap())
                         > get_precedence(ShuntingYardStack::Pow)
                 {
-                    let rhs = Box::new(expression_output.pop_back().unwrap());
-                    let lhs = Box::new(expression_output.pop_back().unwrap());
-                    expression_output.push_back(ASTNode::BinaryOp(
-                        lhs,
-                        rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap()),
-                    ));
+                    let op = stack.pop().unwrap();
+                    match shunting_yard_to_unary_op(op) {
+                        Some(unary_op) => {
+                            // Handle unary operator
+                            let operand = Box::new(expression_output.pop_back().unwrap());
+                            expression_output.push_back(ASTNode::UnaryOp(operand, unary_op));
+                        }
+                        None => {
+                            // Handle binary operator
+                            let rhs = Box::new(expression_output.pop_back().unwrap());
+                            let lhs = Box::new(expression_output.pop_back().unwrap());
+                            expression_output.push_back(ASTNode::BinaryOp(
+                                lhs,
+                                rhs,
+                                shunting_yard_to_binary_op(op),
+                            ));
+                        }
+                    }
                 }
                 stack.push(ShuntingYardStack::Pow);
             }
@@ -363,13 +463,24 @@ pub fn parse(tokens: Vec<Token>) -> Vec<Expression> {
             }
             Token::CloseParen => {
                 while *stack.last().unwrap() != ShuntingYardStack::Paren {
-                    let rhs = Box::new(expression_output.pop_back().unwrap());
-                    let lhs = Box::new(expression_output.pop_back().unwrap());
-                    expression_output.push_back(ASTNode::BinaryOp(
-                        lhs,
-                        rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap()),
-                    ));
+                    let op = stack.pop().unwrap();
+                    match shunting_yard_to_unary_op(op) {
+                        Some(unary_op) => {
+                            // Handle unary operator
+                            let operand = Box::new(expression_output.pop_back().unwrap());
+                            expression_output.push_back(ASTNode::UnaryOp(operand, unary_op));
+                        }
+                        None => {
+                            // Handle binary operator
+                            let rhs = Box::new(expression_output.pop_back().unwrap());
+                            let lhs = Box::new(expression_output.pop_back().unwrap());
+                            expression_output.push_back(ASTNode::BinaryOp(
+                                lhs,
+                                rhs,
+                                shunting_yard_to_binary_op(op),
+                            ));
+                        }
+                    }
                 }
                 stack.pop();
                 //handle functions
@@ -393,27 +504,52 @@ pub fn parse(tokens: Vec<Token>) -> Vec<Expression> {
             Token::Equals => {
                 //pop all remaining operators off the stack
                 while !stack.is_empty() {
-                    let rhs = Box::new(expression_output.pop_back().unwrap());
-                    let lhs = Box::new(expression_output.pop_back().unwrap());
-                    expression_output.push_back(ASTNode::BinaryOp(
-                        lhs,
-                        rhs,
-                        shunting_yard_to_binary_op(stack.pop().unwrap()),
-                    ));
+                    let op = stack.pop().unwrap();
+                    match shunting_yard_to_unary_op(op) {
+                        Some(unary_op) => {
+                            // Handle unary operator
+                            let operand = Box::new(expression_output.pop_back().unwrap());
+                            expression_output.push_back(ASTNode::UnaryOp(operand, unary_op));
+                        }
+                        None => {
+                            // Handle binary operator
+                            let rhs = Box::new(expression_output.pop_back().unwrap());
+                            let lhs = Box::new(expression_output.pop_back().unwrap());
+                            expression_output.push_back(ASTNode::BinaryOp(
+                                lhs,
+                                rhs,
+                                shunting_yard_to_binary_op(op),
+                            ));
+                        }
+                    }
                 }
                 true_output.push(expression_output.pop_back().unwrap());
             }
         }
     }
     while !stack.is_empty() {
-        let rhs = Box::new(expression_output.pop_back().unwrap());
-        let lhs = Box::new(expression_output.pop_back().unwrap());
-        expression_output.push_back(ASTNode::BinaryOp(
-            lhs,
-            rhs,
-            shunting_yard_to_binary_op(stack.pop().unwrap()),
-        ));
+        let op = stack.pop().unwrap();
+        match shunting_yard_to_unary_op(op) {
+            Some(unary_op) => {
+                // Handle unary operator
+                let operand = Box::new(expression_output.pop_back().unwrap());
+                expression_output.push_back(ASTNode::UnaryOp(operand, unary_op));
+            }
+            None => {
+                // Handle binary operator
+                let rhs = Box::new(expression_output.pop_back().unwrap());
+                let lhs = Box::new(expression_output.pop_back().unwrap());
+                expression_output.push_back(ASTNode::BinaryOp(
+                    lhs,
+                    rhs,
+                    shunting_yard_to_binary_op(op),
+                ));
+            }
+        }
     }
     true_output.push(expression_output.pop_back().unwrap());
-    true_output.into_iter().map(|ast: ASTNode| convert_to_expression(&ast)).collect()
+    true_output
+        .into_iter()
+        .map(|ast: ASTNode| convert_to_expression(&ast))
+        .collect()
 }
